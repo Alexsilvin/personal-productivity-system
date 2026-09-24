@@ -1,7 +1,13 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { AppError, buildValidationErrorDetails } from '../../common/errors.js';
 import { courseService } from './course.service.js';
-import { courseIdParamSchema, createCourseSchema, listCoursesQuerySchema, updateCourseSchema } from './course.schemas.js';
+import {
+  courseIdParamSchema,
+  courseUserScopeQuerySchema,
+  createCourseSchema,
+  listCoursesQuerySchema,
+  updateCourseSchema,
+} from './course.schemas.js';
 
 const courseRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/', async (request, reply) => {
@@ -56,9 +62,18 @@ const courseRoutes: FastifyPluginAsync = async (fastify) => {
       );
     }
 
-    const query = request.query as { user_id?: string };
-    const userId = typeof query.user_id === 'string' ? query.user_id : undefined;
-    const course = await courseService.getCourseById(parsedParams.data.id, userId);
+    const parsedQuery = courseUserScopeQuerySchema.safeParse(request.query);
+
+    if (!parsedQuery.success) {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'user_id is required',
+        400,
+        buildValidationErrorDetails(parsedQuery.error.issues),
+      );
+    }
+
+    const course = await courseService.getCourseById(parsedParams.data.id, parsedQuery.data.user_id);
     return reply.code(200).send(course);
   });
 
@@ -85,14 +100,18 @@ const courseRoutes: FastifyPluginAsync = async (fastify) => {
       );
     }
 
-    const query = request.query as { user_id?: string };
-    const userId = typeof query.user_id === 'string' ? query.user_id : undefined;
+    const parsedQuery = courseUserScopeQuerySchema.safeParse(request.query);
 
-    if (!userId) {
-      throw new AppError('VALIDATION_ERROR', 'user_id is required', 400);
+    if (!parsedQuery.success) {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'user_id is required',
+        400,
+        buildValidationErrorDetails(parsedQuery.error.issues),
+      );
     }
 
-    const course = await courseService.updateCourse(parsedParams.data.id, userId, parsedBody.data);
+    const course = await courseService.updateCourse(parsedParams.data.id, parsedQuery.data.user_id, parsedBody.data);
     return reply.code(200).send(course);
   });
 
@@ -108,14 +127,18 @@ const courseRoutes: FastifyPluginAsync = async (fastify) => {
       );
     }
 
-    const query = request.query as { user_id?: string };
-    const userId = typeof query.user_id === 'string' ? query.user_id : undefined;
+    const parsedQuery = courseUserScopeQuerySchema.safeParse(request.query);
 
-    if (!userId) {
-      throw new AppError('VALIDATION_ERROR', 'user_id is required', 400);
+    if (!parsedQuery.success) {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'user_id is required',
+        400,
+        buildValidationErrorDetails(parsedQuery.error.issues),
+      );
     }
 
-    await courseService.deleteCourse(parsedParams.data.id, userId);
+    await courseService.deleteCourse(parsedParams.data.id, parsedQuery.data.user_id);
     return reply.code(204).send();
   });
 };

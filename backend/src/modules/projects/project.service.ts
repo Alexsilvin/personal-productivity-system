@@ -31,12 +31,9 @@ export class ProjectService {
     return project;
   }
 
-  async getProjectById(id: string, userId?: string): Promise<ProjectRecord> {
+  async getProjectById(id: string, userId: string): Promise<ProjectRecord> {
     const project = await this.repository.findProjectById(id);
-    if (!project) {
-      throw new AppError('PROJECT_NOT_FOUND', 'Project not found', 404);
-    }
-    if (userId && project.userId !== userId) {
+    if (!project || project.userId !== userId) {
       throw new AppError('PROJECT_NOT_FOUND', 'Project not found', 404);
     }
     return project;

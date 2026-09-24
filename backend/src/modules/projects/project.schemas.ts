@@ -32,9 +32,13 @@ export const projectIdParamSchema = z.object({
   id: z.string().uuid({ message: 'Project id must be a valid UUID' }),
 });
 
+export const projectUserScopeQuerySchema = z.object({
+  user_id: z.string().uuid({ message: 'user_id must be a valid UUID' }),
+});
+
 export const listProjectsQuerySchema = z
   .object({
-    user_id: z.string().uuid({ message: 'user_id must be a valid UUID' }).optional(),
+    user_id: z.string().uuid({ message: 'user_id must be a valid UUID' }),
     goal_id: z.string().uuid({ message: 'goal_id must be a valid UUID' }).optional(),
     status: projectStatusSchema.optional(),
     priority: projectPrioritySchema.optional(),

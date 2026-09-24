@@ -27,9 +27,13 @@ export const courseIdParamSchema = z.object({
   id: z.string().uuid({ message: 'Course id must be a valid UUID' }),
 });
 
+export const courseUserScopeQuerySchema = z.object({
+  user_id: z.string().uuid({ message: 'user_id must be a valid UUID' }),
+});
+
 export const listCoursesQuerySchema = z
   .object({
-    user_id: z.string().uuid({ message: 'user_id must be a valid UUID' }).optional(),
+    user_id: z.string().uuid({ message: 'user_id must be a valid UUID' }),
     status: courseStatusSchema.optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50),
     offset: z.coerce.number().int().min(0).default(0),

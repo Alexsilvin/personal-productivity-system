@@ -24,12 +24,9 @@ export class GoalService {
     return goal;
   }
 
-  async getGoalById(id: string, userId?: string): Promise<GoalRecord> {
+  async getGoalById(id: string, userId: string): Promise<GoalRecord> {
     const goal = await this.repository.findGoalById(id);
-    if (!goal) {
-      throw new AppError('GOAL_NOT_FOUND', 'Goal not found', 404);
-    }
-    if (userId && goal.userId !== userId) {
+    if (!goal || goal.userId !== userId) {
       throw new AppError('GOAL_NOT_FOUND', 'Goal not found', 404);
     }
     return goal;

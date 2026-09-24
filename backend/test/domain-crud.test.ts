@@ -113,6 +113,12 @@ databaseTests('goal project course CRUD', () => {
     expect(missingUserGoal.statusCode).toBe(404);
     expect(missingUserGoal.json()).toMatchObject({ error: { code: 'USER_NOT_FOUND' } });
 
+    const goalFromA = await app.inject({
+      method: 'GET',
+      url: `/goals/${validGoal.json().id}?user_id=${userAId}`,
+    });
+    expect(goalFromA.statusCode).toBe(200);
+
     const goalFromB = await app.inject({
       method: 'GET',
       url: `/goals/${validGoal.json().id}?user_id=${userBId}`,
@@ -120,12 +126,26 @@ databaseTests('goal project course CRUD', () => {
     expect(goalFromB.statusCode).toBe(404);
     expect(goalFromB.json()).toMatchObject({ error: { code: 'GOAL_NOT_FOUND' } });
 
+    const goalMissingUserScope = await app.inject({
+      method: 'GET',
+      url: `/goals/${validGoal.json().id}`,
+    });
+    expect(goalMissingUserScope.statusCode).toBe(400);
+    expect(goalMissingUserScope.json()).toMatchObject({ error: { code: 'VALIDATION_ERROR' } });
+
     const listGoals = await app.inject({
       method: 'GET',
       url: `/goals?user_id=${userAId}&limit=10&offset=0`,
     });
     expect(listGoals.statusCode).toBe(200);
     expect(listGoals.json().items).toHaveLength(1);
+
+    const listGoalsMissingUserScope = await app.inject({
+      method: 'GET',
+      url: '/goals?limit=10&offset=0',
+    });
+    expect(listGoalsMissingUserScope.statusCode).toBe(400);
+    expect(listGoalsMissingUserScope.json()).toMatchObject({ error: { code: 'VALIDATION_ERROR' } });
   });
 
   it('creates and validates projects with same-user goal relationships and null-clearing', async () => {
@@ -180,6 +200,27 @@ databaseTests('goal project course CRUD', () => {
     });
     expect(crossUserGet.statusCode).toBe(404);
 
+    const projectMissingUserScope = await app.inject({
+      method: 'GET',
+      url: `/projects/${validProject.json().id}`,
+    });
+    expect(projectMissingUserScope.statusCode).toBe(400);
+    expect(projectMissingUserScope.json()).toMatchObject({ error: { code: 'VALIDATION_ERROR' } });
+
+    const listProjects = await app.inject({
+      method: 'GET',
+      url: `/projects?user_id=${userAId}&limit=10&offset=0`,
+    });
+    expect(listProjects.statusCode).toBe(200);
+    expect(listProjects.json().items).toHaveLength(1);
+
+    const listProjectsMissingUserScope = await app.inject({
+      method: 'GET',
+      url: '/projects?limit=10&offset=0',
+    });
+    expect(listProjectsMissingUserScope.statusCode).toBe(400);
+    expect(listProjectsMissingUserScope.json()).toMatchObject({ error: { code: 'VALIDATION_ERROR' } });
+
     const clearGoal = await app.inject({
       method: 'PATCH',
       url: `/projects/${validProject.json().id}?user_id=${userAId}`,
@@ -225,6 +266,25 @@ databaseTests('goal project course CRUD', () => {
     });
     expect(courseB.statusCode).toBe(201);
 
+    const courseFromA = await app.inject({
+      method: 'GET',
+      url: `/courses/${courseA.json().id}?user_id=${userAId}`,
+    });
+    expect(courseFromA.statusCode).toBe(200);
+
+    const courseFromB = await app.inject({
+      method: 'GET',
+      url: `/courses/${courseA.json().id}?user_id=${userBId}`,
+    });
+    expect(courseFromB.statusCode).toBe(404);
+
+    const courseMissingUserScope = await app.inject({
+      method: 'GET',
+      url: `/courses/${courseA.json().id}`,
+    });
+    expect(courseMissingUserScope.statusCode).toBe(400);
+    expect(courseMissingUserScope.json()).toMatchObject({ error: { code: 'VALIDATION_ERROR' } });
+
     const list = await app.inject({
       method: 'GET',
       url: `/courses?user_id=${userAId}&limit=10&offset=0`,
@@ -232,11 +292,12 @@ databaseTests('goal project course CRUD', () => {
     expect(list.statusCode).toBe(200);
     expect(list.json().items).toHaveLength(1);
 
-    const crossUserGet = await app.inject({
+    const listMissingUserScope = await app.inject({
       method: 'GET',
-      url: `/courses/${courseA.json().id}?user_id=${userBId}`,
+      url: '/courses?limit=10&offset=0',
     });
-    expect(crossUserGet.statusCode).toBe(404);
+    expect(listMissingUserScope.statusCode).toBe(400);
+    expect(listMissingUserScope.json()).toMatchObject({ error: { code: 'VALIDATION_ERROR' } });
 
     const update = await app.inject({
       method: 'PATCH',

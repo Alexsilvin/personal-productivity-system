@@ -1,6 +1,12 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { AppError, buildValidationErrorDetails } from '../../common/errors.js';
-import { createProjectSchema, listProjectsQuerySchema, projectIdParamSchema, updateProjectSchema } from './project.schemas.js';
+import {
+  createProjectSchema,
+  listProjectsQuerySchema,
+  projectIdParamSchema,
+  projectUserScopeQuerySchema,
+  updateProjectSchema,
+} from './project.schemas.js';
 import { projectService } from './project.service.js';
 
 const projectRoutes: FastifyPluginAsync = async (fastify) => {
@@ -58,9 +64,18 @@ const projectRoutes: FastifyPluginAsync = async (fastify) => {
       );
     }
 
-    const query = request.query as { user_id?: string };
-    const userId = typeof query.user_id === 'string' ? query.user_id : undefined;
-    const project = await projectService.getProjectById(parsedParams.data.id, userId);
+    const parsedQuery = projectUserScopeQuerySchema.safeParse(request.query);
+
+    if (!parsedQuery.success) {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'user_id is required',
+        400,
+        buildValidationErrorDetails(parsedQuery.error.issues),
+      );
+    }
+
+    const project = await projectService.getProjectById(parsedParams.data.id, parsedQuery.data.user_id);
     return reply.code(200).send(project);
   });
 
@@ -87,14 +102,18 @@ const projectRoutes: FastifyPluginAsync = async (fastify) => {
       );
     }
 
-    const query = request.query as { user_id?: string };
-    const userId = typeof query.user_id === 'string' ? query.user_id : undefined;
+    const parsedQuery = projectUserScopeQuerySchema.safeParse(request.query);
 
-    if (!userId) {
-      throw new AppError('VALIDATION_ERROR', 'user_id is required', 400);
+    if (!parsedQuery.success) {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'user_id is required',
+        400,
+        buildValidationErrorDetails(parsedQuery.error.issues),
+      );
     }
 
-    const project = await projectService.updateProject(parsedParams.data.id, userId, parsedBody.data);
+    const project = await projectService.updateProject(parsedParams.data.id, parsedQuery.data.user_id, parsedBody.data);
     return reply.code(200).send(project);
   });
 
@@ -110,14 +129,18 @@ const projectRoutes: FastifyPluginAsync = async (fastify) => {
       );
     }
 
-    const query = request.query as { user_id?: string };
-    const userId = typeof query.user_id === 'string' ? query.user_id : undefined;
+    const parsedQuery = projectUserScopeQuerySchema.safeParse(request.query);
 
-    if (!userId) {
-      throw new AppError('VALIDATION_ERROR', 'user_id is required', 400);
+    if (!parsedQuery.success) {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'user_id is required',
+        400,
+        buildValidationErrorDetails(parsedQuery.error.issues),
+      );
     }
 
-    await projectService.deleteProject(parsedParams.data.id, userId);
+    await projectService.deleteProject(parsedParams.data.id, parsedQuery.data.user_id);
     return reply.code(204).send();
   });
 };

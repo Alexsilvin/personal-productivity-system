@@ -22,12 +22,9 @@ export class CourseService {
     return course;
   }
 
-  async getCourseById(id: string, userId?: string): Promise<CourseRecord> {
+  async getCourseById(id: string, userId: string): Promise<CourseRecord> {
     const course = await this.repository.findCourseById(id);
-    if (!course) {
-      throw new AppError('COURSE_NOT_FOUND', 'Course not found', 404);
-    }
-    if (userId && course.userId !== userId) {
+    if (!course || course.userId !== userId) {
       throw new AppError('COURSE_NOT_FOUND', 'Course not found', 404);
     }
     return course;

@@ -1,6 +1,12 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { AppError, buildValidationErrorDetails } from '../../common/errors.js';
-import { createGoalSchema, goalIdParamSchema, listGoalsQuerySchema, updateGoalSchema } from './goal.schemas.js';
+import {
+  createGoalSchema,
+  goalIdParamSchema,
+  goalUserScopeQuerySchema,
+  listGoalsQuerySchema,
+  updateGoalSchema,
+} from './goal.schemas.js';
 import { goalService } from './goal.service.js';
 
 const goalRoutes: FastifyPluginAsync = async (fastify) => {
@@ -57,9 +63,18 @@ const goalRoutes: FastifyPluginAsync = async (fastify) => {
       );
     }
 
-    const query = request.query as { user_id?: string };
-    const userId = typeof query.user_id === 'string' ? query.user_id : undefined;
-    const goal = await goalService.getGoalById(parsedParams.data.id, userId);
+    const parsedQuery = goalUserScopeQuerySchema.safeParse(request.query);
+
+    if (!parsedQuery.success) {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'user_id is required',
+        400,
+        buildValidationErrorDetails(parsedQuery.error.issues),
+      );
+    }
+
+    const goal = await goalService.getGoalById(parsedParams.data.id, parsedQuery.data.user_id);
     return reply.code(200).send(goal);
   });
 
@@ -86,14 +101,18 @@ const goalRoutes: FastifyPluginAsync = async (fastify) => {
       );
     }
 
-    const query = request.query as { user_id?: string };
-    const userId = typeof query.user_id === 'string' ? query.user_id : undefined;
+    const parsedQuery = goalUserScopeQuerySchema.safeParse(request.query);
 
-    if (!userId) {
-      throw new AppError('VALIDATION_ERROR', 'user_id is required', 400);
+    if (!parsedQuery.success) {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'user_id is required',
+        400,
+        buildValidationErrorDetails(parsedQuery.error.issues),
+      );
     }
 
-    const goal = await goalService.updateGoal(parsedParams.data.id, userId, parsedBody.data);
+    const goal = await goalService.updateGoal(parsedParams.data.id, parsedQuery.data.user_id, parsedBody.data);
     return reply.code(200).send(goal);
   });
 
@@ -109,14 +128,18 @@ const goalRoutes: FastifyPluginAsync = async (fastify) => {
       );
     }
 
-    const query = request.query as { user_id?: string };
-    const userId = typeof query.user_id === 'string' ? query.user_id : undefined;
+    const parsedQuery = goalUserScopeQuerySchema.safeParse(request.query);
 
-    if (!userId) {
-      throw new AppError('VALIDATION_ERROR', 'user_id is required', 400);
+    if (!parsedQuery.success) {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'user_id is required',
+        400,
+        buildValidationErrorDetails(parsedQuery.error.issues),
+      );
     }
 
-    await goalService.deleteGoal(parsedParams.data.id, userId);
+    await goalService.deleteGoal(parsedParams.data.id, parsedQuery.data.user_id);
     return reply.code(204).send();
   });
 };

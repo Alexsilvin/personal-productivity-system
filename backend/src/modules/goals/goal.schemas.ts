@@ -40,9 +40,13 @@ export const goalIdParamSchema = z.object({
   id: z.string().uuid({ message: 'Goal id must be a valid UUID' }),
 });
 
+export const goalUserScopeQuerySchema = z.object({
+  user_id: z.string().uuid({ message: 'user_id must be a valid UUID' }),
+});
+
 export const listGoalsQuerySchema = z
   .object({
-    user_id: z.string().uuid({ message: 'user_id must be a valid UUID' }).optional(),
+    user_id: z.string().uuid({ message: 'user_id must be a valid UUID' }),
     status: goalStatusSchema.optional(),
     priority: goalPrioritySchema.optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50),
