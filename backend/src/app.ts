@@ -2,6 +2,9 @@ import Fastify from 'fastify';
 import { z } from 'zod';
 import { AppError } from './common/errors.js';
 import { config } from './config.js';
+import courseRoutes from './modules/courses/course.routes.js';
+import goalRoutes from './modules/goals/goal.routes.js';
+import projectRoutes from './modules/projects/project.routes.js';
 import taskRoutes from './modules/tasks/task.routes.js';
 
 export function createApp() {
@@ -67,6 +70,9 @@ export function createApp() {
     timestamp: new Date().toISOString(),
   }));
 
+  app.register(goalRoutes, { prefix: '/goals' });
+  app.register(projectRoutes, { prefix: '/projects' });
+  app.register(courseRoutes, { prefix: '/courses' });
   app.register(taskRoutes, { prefix: '/tasks' });
 
   return app;
