@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pps-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pps
+      POSTGRES_USER: pps
+      POSTGRES_PASSWORD: pps
+    ports:
+      - "5432:5432"
+    volumes:
+      - pps_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  pps_postgres_data:
