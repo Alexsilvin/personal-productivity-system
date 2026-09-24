@@ -37,16 +37,18 @@ databaseTests('database foundation', () => {
   });
 
   it('enforces unique email addresses and positive task durations', async () => {
+    const uniqueEmail = `duplicate-${Date.now()}@example.com`;
+
     await query(`
       INSERT INTO users (email, name, timezone)
-      VALUES ('duplicate@example.com', 'Duplicate User', 'UTC');
-    `);
+      VALUES ($1, 'Duplicate User', 'UTC');
+    `, [uniqueEmail]);
 
     await expect(
       query(`
         INSERT INTO users (email, name, timezone)
-        VALUES ('duplicate@example.com', 'Second User', 'UTC');
-      `),
+        VALUES ($1, 'Second User', 'UTC');
+      `, [uniqueEmail]),
     ).rejects.toThrow();
 
     await expect(
@@ -60,14 +62,14 @@ databaseTests('database foundation', () => {
           minimum_duration_minutes
         )
         VALUES (
-          (SELECT id FROM users WHERE email = 'duplicate@example.com'),
+          (SELECT id FROM users WHERE email = $1),
           'Bad duration task',
           'draft',
           'normal',
           0,
           10
         );
-      `),
+      `, [uniqueEmail]),
     ).rejects.toThrow();
   });
 });
