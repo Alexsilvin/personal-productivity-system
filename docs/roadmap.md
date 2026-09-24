@@ -1,1656 +1,1749 @@
-# Cross-Platform Architecture
+# Development Roadmap
 
-> **The Personal Productivity System must behave as one continuous system regardless of which device the user is currently using.**
-
----
-
-# 1. Purpose
-
-The user should be able to:
-
-* create tasks on Windows;
-* edit tasks on iPhone;
-* reorganize the schedule from either device;
-* receive notifications on either device;
-* mark work complete from either device;
-* postpone tasks from either device;
-* trigger replanning from either device;
-* review progress from either device.
-
-The system must therefore be:
-
-> **Cloud-first, device-independent, and synchronized by default.**
+> From a simple task system to an adaptive personal execution operating system.
 
 ---
 
-# 2. Core Principle
+## 1. Purpose
 
-The system should not think:
+This roadmap defines the development sequence for the Personal Productivity System.
 
-```text
-iPhone System
-+
-Windows System
-```
+The system has a large long-term vision:
 
-It should think:
+> A cross-platform, adaptive execution system that understands the user's goals, priorities, deadlines, available capacity, energy and real-world circumstances, then continuously helps determine and execute the most valuable feasible next action.
 
-```text
-              PERSONAL PRODUCTIVITY SYSTEM
-                         │
-              ┌──────────┴──────────┐
-              │                     │
-           iPhone                 Windows
-              │                     │
-              └──────────┬──────────┘
-                         │
-                    Cloud State
-```
+The danger is obvious:
 
-The devices are interfaces.
+**The vision is much larger than the first useful product.**
 
-The cloud system is the source of truth.
+Therefore, development follows one central rule:
+
+> **Do not build complexity before proving that it improves execution.**
+
+We will build the system in progressively more capable vertical slices.
 
 ---
 
-# 3. Architectural Goals
+# 2. Development Philosophy
 
-The cross-platform architecture must provide:
+The system evolves through several stages:
 
-### Consistency
-
-Both devices should display the same current state.
-
-### Synchronization
-
-Changes made on one device should propagate to the others.
-
-### Availability
-
-The system should remain useful when a device temporarily loses connectivity.
-
-### Device Independence
-
-No critical state should exist only on one device.
-
-### Notification Reachability
-
-Important notifications should reach the user through an appropriate available device.
-
-### Security
-
-Authentication and data access must be protected across every client.
-
-### Extensibility
-
-Future platforms should be able to connect without redesigning the entire backend.
-
----
-
-# 4. High-Level Architecture
-
-```mermaid id="j2j0uh"
-flowchart TB
-
-    subgraph DEVICES["User Devices"]
-
-        IPHONE["iPhone"]
-        WINDOWS["Windows PC"]
-        WEB["Web Browser"]
-
-    end
-
-    subgraph CLOUD["Cloud Platform"]
-
-        API["API Gateway"]
-
-        AUTH["Authentication"]
-
-        CORE["Core Application"]
-
-        TASKS["Task Service"]
-
-        PLANNER["Planning Engine"]
-
-        REPLAN["Replanning Engine"]
-
-        EVENTS["Event Bus"]
-
-        NOTIFY["Notification Service"]
-
-        WORKERS["Background Workers"]
-
-        DB[("Primary Database")]
-
-        CACHE[("Cache")]
-
-    end
-
-    subgraph EXTERNAL["External Services"]
-
-        CALENDAR["Calendar"]
-        PUSH["Push Providers"]
-        AI["AI Services"]
-        EMAIL["Email"]
-
-    end
-
-    IPHONE --> API
-    WINDOWS --> API
-    WEB --> API
-
-    API --> AUTH
-    API --> CORE
-
-    CORE --> TASKS
-    CORE --> PLANNER
-    CORE --> REPLAN
-
-    TASKS --> DB
-    PLANNER --> DB
-    REPLAN --> DB
-
-    TASKS --> EVENTS
-    REPLAN --> EVENTS
-    EVENTS --> NOTIFY
-    EVENTS --> WORKERS
-
-    NOTIFY --> PUSH
-    NOTIFY --> EMAIL
-
-    PLANNER --> AI
-    CORE --> CALENDAR
-
-    CACHE --> CORE
-```
-
----
-
-# 5. Source of Truth
-
-The most important cross-platform rule is:
-
-> **The cloud backend is the authoritative source of persistent system state.**
-
-Examples:
-
-* tasks;
-* goals;
-* projects;
-* deadlines;
-* schedules;
-* completed work;
-* interruptions;
-* notification state;
-* user preferences.
-
-Devices maintain local representations for performance and offline functionality, but they do not become independent authorities.
-
----
-
-# 6. Why Local-Only State Is Dangerous
-
-Imagine:
-
-```text
-Windows:
-Task scheduled for 18:00
-```
-
-Then the user changes it on iPhone:
-
-```text
-iPhone:
-Task moved to 20:00
-```
-
-If both devices have independent state:
-
-```text
-Windows → 18:00
-iPhone → 20:00
-```
-
-The system becomes inconsistent.
-
-With a cloud source of truth:
-
-```text
-iPhone
-   ↓
-Cloud: 20:00
-   ↓
-Windows
-```
-
-Both devices converge on:
-
-```text
-20:00
-```
-
----
-
-# 7. Synchronization Model
-
-The basic synchronization loop is:
-
-```mermaid id="xk1i1s"
+```mermaid
 flowchart LR
+    V0["V0<br/>Foundation"] --> V1["V1<br/>Core Task System"]
+    V1 --> V2["V2<br/>Execution System"]
+    V2 --> V3["V3<br/>Adaptive System"]
+    V3 --> V4["V4<br/>Automated System"]
+    V4 --> V5["V5<br/>AI-Assisted System"]
 
-    CLIENT["Device"]
+    V0:::foundation
+    V1:::core
+    V2:::execution
+    V3:::adaptive
+    V4:::automation
+    V5:::ai
 
-    CLIENT -->|Command| API["Cloud API"]
-
-    API --> STATE["Update State"]
-
-    STATE --> EVENT["Generate Event"]
-
-    EVENT --> SYNC["Synchronization"]
-
-    SYNC --> OTHER["Other Devices"]
-
-    OTHER --> CLIENT
+    classDef foundation fill:#f5f5f5,stroke:#333
+    classDef core fill:#e8f4ff,stroke:#333
+    classDef execution fill:#e8ffe8,stroke:#333
+    classDef adaptive fill:#fff4df,stroke:#333
+    classDef automation fill:#f4e8ff,stroke:#333
+    classDef ai fill:#ffe8ef,stroke:#333
 ```
 
-Example:
-
-```text id="7x2v4g"
-iPhone:
-"Move Database study to 20:00"
-
-        ↓
-
-Cloud:
-Update task schedule
-
-        ↓
-
-Event:
-TASK_SCHEDULE_CHANGED
-
-        ↓
-
-Windows:
-Receive updated state
-```
+Each version must provide real value before the next version begins.
 
 ---
 
-# 8. Commands vs Events
+# 3. The Vertical-Slice Principle
 
-The system should distinguish between:
+The first meaningful product should not be:
 
-### Command
+> "A complete productivity platform."
 
-Something a user or system asks the system to do.
+It should be:
 
-Example:
+> **"I can tell the system what I need to accomplish, and it can tell me what I should work on today and what I should do next."**
 
-```text id="1x4j3g"
-MOVE_TASK
+The first complete vertical slice is:
+
+```mermaid
+flowchart LR
+    A["Create Course / Project"]
+    B["Create Task"]
+    C["Add Deadline"]
+    D["Generate Today"]
+    E["Get Next Action"]
+    F["Start Work"]
+    G["Complete / Postpone"]
+    H["Recalculate"]
+    I["Notify"]
+
+    A --> B --> C --> D --> E --> F --> G --> H --> I
 ```
 
-### Event
+If this loop works reliably, we have the foundation for everything else.
 
-Something that has already happened.
+---
 
-Example:
+# 4. Roadmap Overview
 
-```text id="q1o8y5"
-TASK_MOVED
-```
+| Phase | Name                        | Primary Outcome                                         |
+| ----- | --------------------------- | ------------------------------------------------------- |
+| V0    | Foundation                  | Architecture, repository, development foundation        |
+| V1    | Core System                 | Goals, projects, courses, tasks and deadlines           |
+| V2    | Execution System            | Today, scheduling, next action and execution tracking   |
+| V3    | Adaptive System             | Interruptions, replanning and flexible rigidity         |
+| V4    | Automation & Cross-Platform | Notifications, synchronization, calendar and automation |
+| V5    | Intelligence                | Adaptive scheduling, AI assistance and learning         |
 
-Conceptually:
+---
+
+# 5. V0 — Foundation
+
+## Objective
+
+Create the technical and conceptual foundation without building unnecessary functionality.
+
+The goal is to make future development predictable.
+
+---
+
+## Deliverables
+
+### Documentation
+
+* `README.md`
+* `docs/vision.md`
+* `docs/requirements.md`
+* `docs/architecture.md`
+* `docs/scheduling-engine.md`
+* `docs/interruption-handling.md`
+* `docs/notification-system.md`
+* `docs/cross-platform.md`
+* `docs/roadmap.md`
+
+### Repository
+
+Establish:
 
 ```text
-Command
-   ↓
-Validation
-   ↓
-State Change
-   ↓
-Event
-   ↓
-Synchronization
+personal-productivity-system/
+├── README.md
+├── docs/
+├── backend/
+├── frontend/
+├── mobile/
+├── infrastructure/
+├── scripts/
+└── tests/
+```
+
+The directories may initially remain mostly empty.
+
+---
+
+## Initial Engineering Decisions
+
+Define:
+
+* backend language/framework;
+* frontend framework;
+* mobile strategy;
+* database;
+* authentication approach;
+* deployment target;
+* environment configuration;
+* testing strategy;
+* API conventions;
+* Git workflow.
+
+Do not prematurely optimize these decisions.
+
+---
+
+## Exit Criteria
+
+V0 is complete when:
+
+* architecture is documented;
+* requirements are documented;
+* repository structure exists;
+* development environments can be reproduced;
+* initial technology choices are documented;
+* basic CI can run;
+* the first development task can be started cleanly.
+
+---
+
+## Do Not Build Yet
+
+Do **not** build:
+
+* AI;
+* recommendation models;
+* complex analytics;
+* event-driven microservices;
+* advanced gamification;
+* autonomous agents;
+* complex calendar synchronization;
+* sophisticated notification escalation;
+* custom machine-learning models.
+
+The goal is foundation, not complexity.
+
+---
+
+# 6. V1 — Core Productivity System
+
+## Objective
+
+Build the first usable system for managing work.
+
+The system must understand:
+
+> What am I trying to accomplish?
+
+---
+
+## Core Entities
+
+Implement:
+
+```mermaid
+erDiagram
+    USER ||--o{ GOAL : owns
+    USER ||--o{ PROJECT : owns
+    USER ||--o{ COURSE : studies
+    PROJECT ||--o{ TASK : contains
+    COURSE ||--o{ TASK : contains
+    GOAL ||--o{ PROJECT : supports
+    TASK ||--o{ TASK : depends_on
+    TASK }o--|| DEADLINE : has
+```
+
+Initial entities:
+
+* User
+* Goal
+* Project
+* Course
+* Task
+* Deadline
+
+---
+
+## Task Capabilities
+
+A task should support:
+
+* title;
+* description;
+* status;
+* priority;
+* estimated duration;
+* minimum duration;
+* deadline;
+* project/course;
+* dependencies;
+* creation timestamp;
+* update timestamp;
+* completion timestamp.
+
+Initial states:
+
+```text
+TODO
+IN_PROGRESS
+COMPLETED
+POSTPONED
+BLOCKED
+CANCELLED
 ```
 
 ---
 
-# 9. Device Identity
+## Goal Management
 
-Each registered device should have a device identity.
+The user should be able to define goals such as:
 
-Conceptual model:
+```text
+Goal:
+Improve semester grades
 
-```text id="9w5wsl"
-Device
-├── id
-├── user_id
-├── platform
-├── name
-├── push_token
-├── last_seen
-├── app_version
-└── status
+Area:
+University
+
+Objective:
+Pass all major courses with strong marks
 ```
+
+Tasks can then contribute to these goals.
+
+---
+
+## Deadline Management
+
+The system must distinguish between:
+
+### Hard deadlines
 
 Examples:
 
-```text
-iPhone 11
-Windows PC
-Web Browser
-```
+* exam;
+* assignment submission;
+* project defense;
+* presentation.
+
+### Flexible targets
+
+Examples:
+
+* finish chapter;
+* practice JavaScript;
+* review lecture notes.
+
+This distinction becomes important for scheduling.
 
 ---
 
-# 10. Authentication
+## V1 User Flow
 
-The user should authenticate against the cloud system.
-
-Conceptually:
-
-```mermaid id="v8h8x0"
+```mermaid
 sequenceDiagram
+    actor User
+    participant App
+    participant API
+    participant DB
 
-    participant U as User
-    participant D as Device
-    participant A as Auth
-    participant API as API
+    User->>App: Create course
+    App->>API: POST /courses
+    API->>DB: Save course
+    DB-->>API: Course
+    API-->>App: Success
 
-    U->>D: Login
-    D->>A: Authenticate
-    A->>D: Session / Token
-    D->>API: Authenticated Request
-    API->>A: Validate
-    A->>API: Valid
-    API->>D: Response
-```
-
-Authentication implementation should remain independent from the core scheduling architecture.
-
----
-
-# 11. Sessions
-
-Each device may maintain its own session.
-
-Example:
-
-```text id="xk5q4q"
-User
-│
-├── iPhone Session
-├── Windows Session
-└── Web Session
-```
-
-Logging out of one device should not necessarily invalidate every other session unless the security policy requires it.
-
----
-
-# 12. Synchronization States
-
-A local client can conceptually have:
-
-```text id="g0m2i4"
-SYNCED
-SYNCING
-OFFLINE
-CONFLICT
-ERROR
-```
-
-Example:
-
-```mermaid id="1w3giy"
-stateDiagram-v2
-
-    [*] --> Synced
-
-    Synced --> Syncing: Local Change
-    Syncing --> Synced: Success
-
-    Syncing --> Offline: Connection Lost
-    Offline --> Syncing: Connection Restored
-
-    Syncing --> Conflict: Conflict Detected
-    Conflict --> Synced: Resolved
-
-    Syncing --> Error: Request Failed
-    Error --> Syncing: Retry
+    User->>App: Create task
+    App->>API: POST /tasks
+    API->>DB: Save task
+    DB-->>API: Task
+    API-->>App: Success
 ```
 
 ---
 
-# 13. Offline Mode
+## V1 Acceptance Criteria
 
-The system should support limited offline functionality.
+The user can:
 
-Possible offline operations:
-
-* view recently synchronized tasks;
-* view today's schedule;
-* mark task as completed;
-* postpone task;
-* add task;
-* record interruption.
-
-These actions can be stored locally until connectivity returns.
-
----
-
-# 14. Offline Queue
-
-Conceptually:
-
-```text id="t4iz4r"
-Offline Action Queue
-
-1. TASK_COMPLETED
-2. TASK_POSTPONED
-3. TASK_CREATED
-4. INTERRUPTION_RECORDED
-```
-
-When the connection returns:
-
-```text id="ldw0at"
-Offline Queue
-      ↓
-Synchronization
-      ↓
-Cloud
-      ↓
-Conflict Resolution
-      ↓
-Updated Local State
-```
+* create goals;
+* create courses;
+* create projects;
+* create tasks;
+* assign tasks to courses/projects;
+* set priorities;
+* set deadlines;
+* estimate duration;
+* mark tasks completed;
+* postpone tasks;
+* view unfinished work.
 
 ---
 
-# 15. Offline Limitations
+## Exit Criteria
 
-Some features should not run fully offline initially.
+V1 is complete when the system can reliably answer:
 
-Examples:
-
-* global replanning;
-* cloud AI reasoning;
-* cross-device synchronization;
-* external calendar synchronization;
-* push notification orchestration.
-
-The client can record the user's action and let the backend process it when connectivity returns.
+> **What work do I have?**
 
 ---
 
-# 16. Conflict Resolution
+## Do Not Build Yet
 
-Conflicts can occur when two devices modify the same state.
+Do not build:
+
+* AI planning;
+* advanced scheduling;
+* push notifications;
+* predictive analytics;
+* automatic rescheduling;
+* complex event buses.
+
+---
+
+# 7. V2 — Execution System
+
+## Objective
+
+Transform the task database into an actual execution system.
+
+The system must now answer:
+
+> **What should I work on today?**
+
+and eventually:
+
+> **What should I do right now?**
+
+---
+
+# 8. Today View
+
+Create a dedicated daily execution interface.
 
 Example:
 
 ```text
-10:00
+TODAY
 
-iPhone:
-Move task → 18:00
+08:00 ── Mathematics
+         Limits exercises
+         60 min
 
-Windows:
-Move task → 20:00
+10:00 ── Programming
+         React Native navigation
+         90 min
+
+14:00 ── Database
+         PostgreSQL revision
+         45 min
+
+17:00 ── Review
+         Flashcards
+         20 min
 ```
-
-Both changes cannot necessarily coexist.
 
 ---
 
-# 17. Conflict Strategy
+# 9. Scheduling Engine V1
 
-The system should not blindly use:
+Implement a deterministic scheduling engine.
+
+Inputs:
 
 ```text
-Last device wins
+Tasks
++
+Deadlines
++
+Priority
++
+Estimated duration
++
+Available time
++
+Dependencies
 ```
 
-for every type of data.
-
-Instead, conflict resolution should depend on the state being modified.
-
-Possible strategies:
-
-### Last Valid Update
-
-Useful for simple preferences.
-
-### Version Check
-
-Reject outdated writes.
-
-### Merge
-
-Useful for independent fields.
-
-### User Resolution
-
-Useful when both changes are significant.
-
----
-
-# 18. Optimistic Concurrency
-
-A task can have a version number.
-
-Example:
-
-```text id="r7sn7k"
-Task version: 12
-```
-
-iPhone sends:
+Output:
 
 ```text
-Update task
-Expected version: 12
+Daily Plan
 ```
 
-If Windows already changed it:
+---
+
+## Basic Scheduling Flow
+
+```mermaid
+flowchart TD
+    A["Load Tasks"] --> B["Load Deadlines"]
+    B --> C["Load Availability"]
+    C --> D["Filter Impossible Tasks"]
+    D --> E["Calculate Priority"]
+    E --> F["Rank Tasks"]
+    F --> G["Allocate Time"]
+    G --> H["Insert Buffers"]
+    H --> I["Validate Schedule"]
+    I --> J["Generate Today"]
+```
+
+---
+
+# 10. The "What Now?" Engine
+
+This is one of the most important components in the entire system.
+
+The user should eventually be able to open the application and immediately see:
 
 ```text
-Current version: 13
+WHAT SHOULD I DO NOW?
+
+→ Finish PostgreSQL normalization exercise
+
+Estimated time:
+35 minutes
+
+Why:
+Assignment due tomorrow
+
+Minimum action:
+Complete questions 1–2
+
+[ START ]
 ```
-
-The server can reject the outdated update.
-
-This prevents silent overwrites.
 
 ---
 
-# 19. Event Ordering
+## Decision Pipeline
 
-Events should have enough metadata to determine ordering.
+```mermaid
+flowchart TD
+    A["Current Context"]
+    B["Active Goals"]
+    C["Deadlines"]
+    D["Remaining Tasks"]
+    E["Available Time"]
+    F["Current Energy"]
 
-Conceptually:
+    A --> G["Context Collector"]
+    B --> G
+    C --> G
+    D --> G
+    E --> G
+    F --> G
 
-```text id="qj8i8v"
-Event
-├── event_id
-├── entity_id
-├── timestamp
-├── sequence
-├── event_type
-└── version
+    G --> H["Priority Engine"]
+    H --> I["Constraint Check"]
+    I --> J["Task Ranking"]
+    J --> K["Next Action"]
 ```
-
-This allows clients to process changes reliably.
 
 ---
 
-# 20. Real-Time Synchronization
+# 11. Execution Tracking
 
-The system may use real-time communication where useful.
+The system must begin observing what actually happens.
 
-Possible technologies:
+Track:
+
+* task started;
+* task paused;
+* task completed;
+* task postponed;
+* task blocked;
+* time spent;
+* estimated vs actual duration.
+
+---
+
+## Event History
+
+Introduce an event model:
 
 ```text
-WebSocket
-Server-Sent Events
-Push Notifications
-Polling
+TASK_CREATED
+TASK_STARTED
+TASK_PAUSED
+TASK_COMPLETED
+TASK_POSTPONED
+TASK_BLOCKED
+TASK_RESUMED
 ```
 
-The first implementation does not necessarily need permanent real-time connections everywhere.
-
-A hybrid approach may be more practical.
+This creates the foundation for future adaptive behavior.
 
 ---
 
-# 21. Synchronization Strategy
+# 12. V2 Acceptance Criteria
 
-A practical architecture:
+The user can:
 
-```mermaid id="yn7n1v"
-flowchart TB
-
-    SERVER["Cloud State"]
-
-    SERVER -->|Normal API| CLIENT["Client"]
-
-    SERVER -->|Real-time Event| CLIENT
-
-    SERVER -->|Push Notification| DEVICE["Device"]
-
-    CLIENT -->|Command| SERVER
-
-    CLIENT -->|Periodic Sync| SERVER
-```
-
-Use:
-
-* API calls for authoritative changes;
-* real-time updates where immediate synchronization matters;
-* push notifications for attention;
-* periodic synchronization as a recovery mechanism.
+1. create tasks;
+2. define deadlines;
+3. define available time;
+4. generate a daily schedule;
+5. see the next action;
+6. start a task;
+7. complete a task;
+8. postpone a task;
+9. see the schedule update;
+10. review what actually happened.
 
 ---
 
-# 22. Push Notifications vs Synchronization
+## V2 Exit Question
 
-These are different systems.
+Before continuing:
 
-### Synchronization
+> **Does this system actually make it easier to start and complete important work?**
 
-Answers:
+If the answer is no, improve V2 before adding intelligence.
 
-> What is the current state?
+---
 
-### Push Notification
+# 13. V3 — Adaptive Execution System
 
-Answers:
+## Objective
 
-> You should look at something now.
+Make the system resilient to real life.
 
-Example:
+This phase introduces the central principle:
+
+> **Reality beats the plan.**
+
+The schedule is no longer considered permanent.
+
+---
+
+# 14. Interruption Handling
+
+Implement:
 
 ```text
-Cloud:
-Task moved to 20:00
+TASK_INTERRUPTED
+INTERRUPTION_STARTED
+INTERRUPTION_ENDED
+SCHEDULE_INVALIDATED
+REPLAN_STARTED
+REPLAN_COMPLETED
+NEXT_ACTION_CHANGED
 ```
 
-Synchronization updates the device.
+---
+
+## Replanning Flow
+
+```mermaid
+flowchart TD
+    A["Current Schedule"]
+    B["Interruption / Event"]
+
+    B --> C["Capture Current State"]
+    C --> D["Calculate Remaining Capacity"]
+    D --> E["Protect Fixed Commitments"]
+    E --> F["Protect Critical Deadlines"]
+    F --> G["Recalculate Priorities"]
+    G --> H["Move Flexible Work"]
+    H --> I["Split Large Tasks"]
+    I --> J["Generate New Schedule"]
+    J --> K["Determine Next Action"]
+    K --> L["Notify User"]
+
+    A --> C
+```
+
+---
+
+# 15. Example
+
+Original plan:
+
+```text
+09:00 - Programming
+10:30 - Mathematics
+13:00 - Database
+15:00 - Project
+```
+
+At 09:20:
+
+```text
+Unexpected family obligation
+Duration: 2 hours
+```
+
+The system does **not** say:
+
+> "You failed your schedule."
+
+Instead:
+
+```text
+Schedule interrupted.
+
+Programming:
+20 minutes completed.
+
+Remaining:
+70 minutes.
+
+Replanning...
+```
 
 Then:
 
 ```text
-Cloud:
-Schedule changed significantly
+10:00 - Family obligation
+12:00 - Lunch / recovery
+13:00 - Programming
+14:10 - Mathematics
+15:30 - Database
 ```
 
-Push notification tells the user.
+The objective remains intact.
 
-The notification itself should not be treated as the source of truth.
+The route changed.
 
 ---
 
-# 23. Notification Payloads
+# 16. Minimum Viable Action
 
-A notification should contain enough information to route the user to the correct state.
-
-Conceptual payload:
-
-```json id="4u1d1v"
-{
-  "type": "NEXT_ACTION",
-  "entity_id": "task_123",
-  "timestamp": "...",
-  "deep_link": "/tasks/task_123"
-}
-```
-
-The client should then retrieve the authoritative state from the backend.
-
----
-
-# 24. Deep Linking
-
-Notifications should open the relevant screen.
-
-Example:
-
-```text id="r8u3f0"
-Notification
-    ↓
-Tap
-    ↓
-App opens
-    ↓
-Task details
-    ↓
-Next action
-```
-
-This prevents the user from having to search manually.
-
----
-
-# 25. Cross-Device Example
-
-Suppose the user is working on Windows.
-
-```text id="w4r7jp"
-Windows:
-Database study
-```
-
-An interruption occurs.
-
-The user records it from Windows.
-
-```text
-Windows
-   ↓
-Cloud
-   ↓
-Replanning Engine
-   ↓
-Updated Schedule
-```
-
-The iPhone receives:
-
-> **Schedule updated. Your Database session was interrupted.**
-
-Both devices now display the same schedule.
-
----
-
-# 26. Device Handoff
-
-The system should support natural handoff.
-
-Example:
-
-```text id="4x1z0c"
-Work starts on Windows
-        ↓
-User leaves computer
-        ↓
-Opens iPhone
-        ↓
-Same task state appears
-        ↓
-Continue execution
-```
-
-The user should not need to manually transfer state.
-
----
-
-# 27. Current Active Device
-
-The system may optionally track which device is currently active.
-
-Example:
-
-```text id="4w1g8m"
-Windows:
-Active
-
-iPhone:
-Idle
-```
-
-This can help choose where to surface certain notifications.
-
-However, notification delivery should never depend exclusively on active-device detection.
-
----
-
-# 28. Device Availability
-
-Conceptually:
-
-```text id="iy6y2q"
-Device
-   ↓
-Available?
-   ├── Yes
-   └── No
-```
-
-Possible states:
-
-```text
-ONLINE
-RECENTLY_ACTIVE
-IDLE
-OFFLINE
-UNKNOWN
-```
-
----
-
-# 29. Notification Routing
-
-A notification router may consider:
-
-```text id="2z1q6q"
-Importance
-+
-Device availability
-+
-User preferences
-+
-Notification type
-+
-Current context
-```
+Repeated postponement should trigger decomposition.
 
 Example:
 
 ```text
-Critical
-+
-iPhone online
-+
-Windows offline
-        ↓
-iPhone
+Original task:
+Study database normalization
+
+↓
+
+Minimum viable action:
+Review normalization notes for 10 minutes
+
+↓
+
+If started:
+Continue if energy/time allows.
 ```
 
-Another:
+This prevents large tasks from becoming psychologically invisible barriers.
+
+---
+
+# 17. Energy Awareness
+
+Introduce four energy states:
 
 ```text
-Normal
-+
-Windows active
-+
-iPhone available
-        ↓
-Windows
+HIGH
+NORMAL
+LOW
+EXHAUSTED
 ```
 
----
-
-# 30. Cloud-First Data Flow
-
-```mermaid id="rx1b5n"
-flowchart LR
-
-    IPHONE["iPhone"]
-    WINDOWS["Windows"]
-    WEB["Web"]
-
-    IPHONE --> CLOUD["Cloud Source of Truth"]
-    WINDOWS --> CLOUD
-    WEB --> CLOUD
-
-    CLOUD --> IPHONE
-    CLOUD --> WINDOWS
-    CLOUD --> WEB
-```
-
-This is the foundation of cross-platform consistency.
-
----
-
-# 31. Local Data
-
-Clients may maintain a local cache.
-
-Useful for:
-
-* speed;
-* offline access;
-* reduced network usage;
-* instant UI;
-* temporary action queues.
-
-But:
-
-> **Local cache ≠ authoritative state.**
-
----
-
-# 32. Local Cache Architecture
-
-```mermaid id="g4i9cf"
-flowchart TB
-
-    UI["User Interface"]
-
-    UI --> LOCAL["Local State / Cache"]
-
-    LOCAL --> SYNC["Sync Manager"]
-
-    SYNC --> API["Cloud API"]
-
-    API --> DB[("Cloud Database")]
-
-    DB --> API
-    API --> SYNC
-    SYNC --> LOCAL
-    LOCAL --> UI
-```
-
----
-
-# 33. Sync Manager
-
-Each client should have a synchronization layer responsible for:
-
-* detecting local changes;
-* sending changes;
-* receiving server updates;
-* retrying failed requests;
-* maintaining local cache;
-* handling conflicts;
-* processing events;
-* maintaining sync status.
-
-This logic should not be scattered across every UI screen.
-
----
-
-# 34. API-First Architecture
-
-The frontend should communicate through a defined API.
+Tasks should have compatibility requirements.
 
 Example:
 
-```text id="j9y1kv"
-POST   /tasks
-GET    /tasks
-PATCH  /tasks/:id
-DELETE /tasks/:id
-
-POST   /tasks/:id/complete
-POST   /tasks/:id/postpone
-POST   /tasks/:id/interruption
-
-GET    /schedule/today
-POST   /schedule/replan
-
-GET    /notifications
-POST   /notifications/:id/action
-```
-
-These are conceptual endpoint examples.
+| Energy    | Suitable Work                                    |
+| --------- | ------------------------------------------------ |
+| HIGH      | difficult programming, mathematics, new concepts |
+| NORMAL    | exercises, coding, revision                      |
+| LOW       | flashcards, rereading, organization              |
+| EXHAUSTED | minimum action or recovery                       |
 
 ---
 
-# 35. Why API-First Matters
+# 18. V3 Acceptance Criteria
 
-If the system later adds:
+The system can:
 
-* Android;
-* macOS;
-* another web client;
-* smartwatch;
-* desktop application;
-
-the backend does not need to be redesigned.
-
-A new client simply consumes the existing APIs.
-
----
-
-# 36. Web Application
-
-The web client should initially provide the most complete management interface.
-
-Useful features:
-
-```text id="cb1bqg"
-Dashboard
-Tasks
-Goals
-Projects
-Calendar
-Schedule
-Reviews
-Settings
-Analytics
-```
-
-This is particularly useful on Windows.
+* detect an interruption;
+* preserve task progress;
+* invalidate affected schedule blocks;
+* recalculate remaining capacity;
+* protect deadlines;
+* move flexible tasks;
+* generate a revised plan;
+* provide a new next action;
+* handle repeated postponement;
+* support minimum viable actions;
+* incorporate basic energy state.
 
 ---
 
-# 37. Mobile Experience
+## V3 Exit Question
 
-The mobile experience should focus on execution.
+> **Can the system recover intelligently when the user's day does not go according to plan?**
 
-Primary screens:
+If yes, move forward.
 
-```text id="v0d7m4"
-Today
+---
+
+# 19. V4 — Automation & Cross-Platform System
+
+## Objective
+
+Turn the system from an application the user checks into a system that actively supports execution.
+
+---
+
+# 20. Notification System
+
+Introduce:
+
+```text
+Morning Mission
+Start-of-Block
 Next Action
-Tasks
-Schedule
-Quick Add
-Notifications
+Drift Detection
+Task Completion
+Postponement
+Interruption
+Replanning
+Deadline Warning
+Evening Review
+Weekly Review
 ```
-
-The mobile interface should minimize unnecessary configuration while the user is busy.
 
 ---
 
-# 38. Windows Experience
+## Notification Architecture
 
-The Windows experience can emphasize:
-
-* planning;
-* task organization;
-* project work;
-* schedule editing;
-* dashboards;
-* reviews;
-* detailed task management.
-
----
-
-# 39. Same Data, Different UX
-
-The platforms do not need identical interfaces.
-
-They need identical underlying state.
-
-```text
-Same Backend
-      │
- ┌────┼────┐
- │    │    │
-iPhone Windows Web
- │    │    │
-Execution Planning Management
-```
-
-This is preferable to forcing the same interface everywhere.
-
----
-
-# 40. Calendar Integration
-
-The system may integrate with external calendars.
-
-Examples:
-
-```text
-Google Calendar
-Microsoft Outlook Calendar
-Apple Calendar
-```
-
-The productivity system should distinguish:
-
-### External Calendar Event
-
-Something scheduled elsewhere.
-
-### Internal Plan Block
-
-A block generated by the productivity system.
-
-Example:
-
-```text
-Calendar:
-14:00 Class
-
-Planner:
-18:00 Database Study
-```
-
-The class becomes a constraint.
-
-The study block becomes an internal planning decision.
-
----
-
-# 41. Calendar Synchronization
-
-```mermaid id="e6q2o0"
+```mermaid
 flowchart LR
+    E["System Event"]
+    D["Notification Decision"]
+    Q["Notification Queue"]
+    R["Channel Router"]
 
-    CAL["External Calendar"]
+    E --> D
+    D --> Q
+    Q --> R
 
-    CAL --> IMPORT["Calendar Integration"]
-
-    IMPORT --> CONSTRAINTS["Scheduling Constraints"]
-
-    CONSTRAINTS --> PLANNER["Planning Engine"]
-
-    PLANNER --> PLAN["Internal Plan"]
-
-    PLAN --> CLIENT["User Devices"]
+    R --> I["iPhone Push"]
+    R --> W["Windows Notification"]
+    R --> B["Web"]
+    R --> M["Email"]
 ```
-
-The initial implementation may use one calendar provider before expanding to others.
 
 ---
 
-# 42. Time Zones
+# 21. Accountability
 
-All important timestamps should be stored in a timezone-safe format.
+The system should gradually escalate reminders.
+
+```mermaid
+flowchart TD
+    A["Block Starts"]
+    B["Grace Period"]
+    C["Progress Check"]
+    D["Gentle Reminder"]
+    E["Direct Prompt"]
+    F["Minimum Viable Action"]
+    G["Explicit Reschedule"]
+    H["Review"]
+
+    A --> B --> C --> D --> E --> F --> G --> H
+```
+
+The purpose is not punishment.
+
+The purpose is to reduce the probability that important work disappears.
+
+---
+
+# 22. Cross-Platform Synchronization
+
+The cloud becomes the source of truth.
+
+```mermaid
+flowchart LR
+    I["iPhone"]
+    W["Windows PC"]
+    B["Web"]
+
+    I --> API["Cloud API"]
+    W --> API
+    B --> API
+
+    API --> DB["Cloud Database"]
+    DB --> API
+
+    API --> I
+    API --> W
+    API --> B
+```
+
+A task created on Windows should immediately become available on iPhone.
+
+A task completed on iPhone should update the Windows experience.
+
+---
+
+# 23. Calendar Integration
+
+Only after internal scheduling works reliably should external calendar integration be added.
 
 The system should distinguish:
 
 ```text
-UTC timestamp
-+
-User timezone
-+
-Local display time
+Internal Plan Block
+        ↓
+System-generated work
+
+External Calendar Event
+        ↓
+Real-world commitment
 ```
 
-This becomes important if the user travels.
+Calendar events become constraints rather than blindly becoming tasks.
 
 ---
 
-# 43. Device Clock
+# 24. Automation Layer
 
-The backend should not blindly trust device clocks for critical operations.
+Potential integrations:
+
+* calendar;
+* notifications;
+* email;
+* webhooks;
+* task automation;
+* device events;
+* future integrations.
+
+The automation layer should react to events.
+
+Example:
+
+```text
+Task deadline approaching
+        ↓
+Event
+        ↓
+Planning Engine
+        ↓
+Schedule updated
+        ↓
+Notification
+        ↓
+User acts
+```
+
+---
+
+# 25. V4 Acceptance Criteria
+
+The system can:
+
+* send notifications;
+* notify the user across supported devices;
+* synchronize state across devices;
+* react to important events;
+* integrate calendar constraints;
+* automatically trigger replanning;
+* provide morning and evening workflows;
+* support basic accountability.
+
+---
+
+# 26. V5 — Adaptive Intelligence
+
+## Objective
+
+Only after deterministic planning works should intelligence be added.
+
+The AI should not replace the system.
+
+It should sit on top of structured system state.
+
+```mermaid
+flowchart TD
+    A["Structured System State"]
+    B["Deterministic Rules"]
+    C["Planning Engine"]
+
+    A --> D["AI Reasoning Layer"]
+    B --> D
+    C --> D
+
+    D --> E["Suggested Decision"]
+    E --> F["Validation"]
+    F --> G["User"]
+```
+
+---
+
+# 27. AI Responsibilities
+
+AI may eventually help with:
+
+### Task decomposition
+
+```text
+"Study database"
+
+↓
+
+"Review normalization"
+"Complete exercises"
+"Review mistakes"
+"Do timed practice"
+```
+
+### Ambiguous input
+
+```text
+"Tomorrow I need to prepare for database."
+
+↓
+
+AI interprets intent.
+
+↓
+
+Structured tasks are proposed.
+```
+
+### Planning explanations
+
+```text
+Why should I do this now?
+
+↓
+
+"Because the assignment is due tomorrow
+and this task blocks the remaining work."
+```
+
+### Replanning
+
+AI can help interpret unusual circumstances.
+
+---
+
+# 28. AI Must Not Control Critical State Directly
+
+Critical state should remain deterministic.
+
+Examples:
+
+```text
+Deadline
+Task status
+Completion
+Calendar commitment
+User identity
+Schedule constraints
+Notification policy
+```
+
+AI proposes.
+
+The system validates.
+
+The user remains in control.
+
+```mermaid
+flowchart LR
+    AI["AI"]
+    S["Suggestion"]
+    V["Validation"]
+    A["Apply"]
+    U["User Override"]
+
+    AI --> S --> V --> A
+    V --> U
+    U --> A
+```
+
+---
+
+# 29. Adaptive Scheduling
+
+Once sufficient execution history exists, the system can begin learning patterns.
+
+Examples:
+
+```text
+Estimated:
+60 minutes
+
+Actual historical average:
+82 minutes
+```
+
+The scheduler can gradually improve future estimates.
+
+Other patterns:
+
+```text
+Programming:
+High performance → morning
+
+Revision:
+Good performance → evening
+
+Long tasks:
+Often interrupted after 45 minutes
+```
+
+These observations should influence planning only after enough evidence exists.
+
+---
+
+# 30. AI Learning Loop
+
+```mermaid
+flowchart LR
+    A["Plan"]
+    B["Execute"]
+    C["Observe"]
+    D["Measure"]
+    E["Learn"]
+    F["Improve"]
+
+    A --> B --> C --> D --> E --> F --> A
+```
+
+The system becomes better because it observes reality.
+
+---
+
+# 31. Analytics
+
+Analytics should answer useful questions.
+
+Not:
+
+> "How many colorful charts can we display?"
+
+Instead:
+
+### Execution
+
+* How much planned work was completed?
+* How often are important tasks postponed?
+* How often are schedules invalidated?
+
+### Planning
+
+* Are estimates accurate?
+* Is the schedule overloaded?
+* How much buffer is required?
+
+### Academic performance
+
+* Which courses receive insufficient attention?
+* Which deadlines repeatedly cause emergency work?
+* Which types of work are being neglected?
+
+---
+
+# 32. Development Dependency Graph
+
+The development order should follow dependencies.
+
+```mermaid
+flowchart TD
+    A["Foundation"] --> B["Core Data"]
+    B --> C["Task Management"]
+    C --> D["Deadlines"]
+    D --> E["Daily Planning"]
+    E --> F["Next Action"]
+    F --> G["Execution Tracking"]
+    G --> H["Event History"]
+
+    H --> I["Interruption Handling"]
+    I --> J["Replanning"]
+
+    J --> K["Notifications"]
+    K --> L["Cross-Platform Sync"]
+
+    L --> M["Calendar"]
+    M --> N["Automation"]
+
+    N --> O["Adaptive Scheduling"]
+    O --> P["AI Assistance"]
+    P --> Q["Learning / Analytics"]
+```
+
+This order is intentional.
 
 For example:
 
-```text
-Device says:
-18:00
+**AI before structured task data is premature.**
 
-Server says:
-17:58
-```
+**Notifications before reliable scheduling can create noise.**
 
-The backend should remain authoritative for server-side event ordering.
+**Advanced analytics before meaningful history produces misleading conclusions.**
 
 ---
 
-# 44. Connectivity Failures
+# 33. Milestone Structure
 
-Network failures should not destroy user actions.
+Each phase should have a milestone.
 
-Example:
+```text
+M0 — Foundation Complete
+M1 — Tasks & Goals Working
+M2 — Daily Planning Working
+M3 — Adaptive Replanning Working
+M4 — Automated Cross-Platform System
+M5 — Intelligent Execution System
+```
 
-```mermaid id="j5z7jz"
+---
+
+# 34. Definition of Done
+
+A feature is not considered complete merely because the code works.
+
+A feature is done when:
+
+```mermaid
 flowchart TD
+    A["Implementation"]
+    B["Unit Tests"]
+    C["Integration Tests"]
+    D["User Flow Test"]
+    E["Failure Handling"]
+    F["Documentation"]
+    G["Observable Behavior"]
 
-    ACTION[User Action]
-    ACTION --> NETWORK{Network Available?}
-
-    NETWORK -->|Yes| SERVER[Send to Server]
-    NETWORK -->|No| LOCAL[Store Locally]
-
-    LOCAL --> RETRY[Retry Later]
-    RETRY --> SERVER
-
-    SERVER --> SUCCESS[Confirm]
+    A --> B --> C --> D --> E --> F --> G
 ```
 
----
+A feature should have:
 
-# 45. Retry Strategy
-
-Failed synchronization should use controlled retries.
-
-Conceptually:
-
-```text id="5d0n0a"
-Attempt 1
-   ↓
-Wait
-   ↓
-Attempt 2
-   ↓
-Wait
-   ↓
-Attempt 3
-   ↓
-Longer Backoff
-```
-
-The system should avoid hammering the server during outages.
+* implementation;
+* tests;
+* documented behavior;
+* error handling;
+* usable interface;
+* observable state;
+* clear failure behavior.
 
 ---
 
-# 46. Data Integrity
+# 35. Testing Strategy
 
-Important state changes should be:
+Testing should evolve with the system.
 
-* validated;
-* versioned where appropriate;
-* persisted transactionally;
-* logged;
-* recoverable.
+## V1
 
-Critical operations should not depend solely on client state.
+Test:
 
----
+* CRUD;
+* task states;
+* deadlines;
+* priorities.
 
-# 47. Security
+## V2
 
-Cross-platform architecture introduces multiple attack surfaces.
+Test:
 
-The system should protect:
+* scheduling;
+* task ranking;
+* time allocation;
+* completion;
+* postponement.
 
-```text id="d0j5d9"
-Authentication
-Authorization
-Sessions
-Device Tokens
-API Requests
-Stored Data
-Push Tokens
-Local Cache
-```
+## V3
 
-Sensitive data should not be unnecessarily stored on devices.
+Test:
 
----
+* interruptions;
+* schedule invalidation;
+* replanning;
+* recovery;
+* minimum viable actions.
 
-# 48. Revoking a Device
+## V4
 
-The user should be able to revoke a device.
+Test:
 
-Example:
+* synchronization;
+* notifications;
+* offline behavior;
+* duplicate events;
+* calendar conflicts.
 
-```text id="y4s5nk"
-Settings
-   ↓
-Devices
-   ↓
-Windows PC
-   ↓
-Revoke Access
-```
+## V5
 
-The backend invalidates that device's credentials.
+Test:
 
----
-
-# 49. Lost Device
-
-If the iPhone is lost:
-
-```text id="u5v8nm"
-Cloud account
-   ↓
-Device Management
-   ↓
-Revoke iPhone
-```
-
-The rest of the system remains accessible.
+* AI suggestions;
+* deterministic validation;
+* unsafe/invalid recommendations;
+* hallucinated information;
+* user override.
 
 ---
 
-# 50. Multi-Device Consistency Test
+# 36. Critical Failure Scenarios
 
-A core acceptance test:
+The system must explicitly test:
 
-```text id="2o1kz5"
-Create task on Windows
-        ↓
-Verify on iPhone
+### Scenario 1 — User misses a block
 
-Complete task on iPhone
-        ↓
-Verify on Windows
-
-Postpone task on Windows
-        ↓
-Verify on iPhone
-
-Trigger replan on iPhone
-        ↓
-Verify on Windows
-```
-
-All states should converge.
-
----
-
-# 51. Cross-Platform Failure Scenarios
-
-The system should eventually test:
-
-### Scenario A
-
-iPhone offline.
-
+```text
 Expected:
+Replan.
 
-```text
-Local actions preserved.
+Not:
+Destroy the entire day.
 ```
 
-### Scenario B
-
-Windows offline.
-
-Expected:
+### Scenario 2 — Parent calls unexpectedly
 
 ```text
-Local actions preserved.
+Expected:
+Capture interruption → preserve progress → replan.
 ```
 
-### Scenario C
-
-Both offline.
-
-Expected:
+### Scenario 3 — Task takes twice as long
 
 ```text
-Local state usable.
-Synchronization later.
+Expected:
+Recalculate remaining capacity.
 ```
 
-### Scenario D
-
-Both devices edit the same task.
-
-Expected:
+### Scenario 4 — Deadline becomes urgent
 
 ```text
-Conflict detected/resolved.
+Expected:
+Increase priority.
 ```
 
-### Scenario E
-
-Push notification fails.
-
-Expected:
+### Scenario 5 — User postpones task repeatedly
 
 ```text
-State remains correct.
-Notification can be retried or recovered.
+Expected:
+Investigate / decompose / reschedule.
+```
+
+### Scenario 6 — Device goes offline
+
+```text
+Expected:
+Local state remains usable.
+Changes synchronize later.
+```
+
+### Scenario 7 — Notification service fails
+
+```text
+Expected:
+Core productivity state remains intact.
 ```
 
 ---
 
-# 52. Source of Truth Hierarchy
+# 37. Major Risks
 
-The architecture should maintain a clear hierarchy:
+## Risk 1 — Overengineering
 
-```text
-                  CLOUD DATABASE
-                       │
-                Authoritative State
-                       │
-              ┌────────┼────────┐
-              │        │        │
-           iPhone   Windows    Web
-              │        │        │
-           Local     Local     Local
-           Cache     Cache     Cache
-```
+### Problem
 
-If local state conflicts with cloud state:
+Trying to build the final architecture immediately.
 
-> **The system resolves the conflict according to the synchronization policy, with the cloud remaining authoritative for persistent state.**
+### Mitigation
+
+Build the smallest useful version first.
 
 ---
 
-# 53. Technology Independence
+## Risk 2 — Notification Fatigue
 
-The architecture intentionally does not require a specific framework.
+### Problem
 
-Possible future implementations include:
+Too many reminders cause the user to ignore all reminders.
 
-### Backend
+### Mitigation
+
+Introduce notification budgets and escalation gradually.
+
+---
+
+## Risk 3 — Bad Scheduling
+
+### Problem
+
+An apparently intelligent scheduler creates unrealistic plans.
+
+### Mitigation
+
+Start deterministic and simple.
+
+Measure reality before increasing complexity.
+
+---
+
+## Risk 4 — AI Overreach
+
+### Problem
+
+AI makes decisions that should be deterministic.
+
+### Mitigation
+
+Use:
 
 ```text
-Node.js
-Python
-Go
-Java
+AI → Suggest
+System → Validate
+User → Control
 ```
 
-### Database
+---
+
+## Risk 5 — Scope Explosion
+
+### Problem
+
+Every new idea becomes a feature.
+
+### Mitigation
+
+For every proposed feature ask:
+
+> Does this materially improve execution?
+
+If not:
+
+**defer it.**
+
+---
+
+# 38. Build vs Buy
+
+The project should not recreate infrastructure unnecessarily.
+
+Prefer established services for:
+
+* authentication;
+* push notifications;
+* email delivery;
+* cloud hosting;
+* database hosting;
+* calendar APIs;
+* object storage;
+* monitoring.
+
+Build custom logic where it creates the project's unique value:
+
+* scheduling;
+* next-action selection;
+* interruption handling;
+* replanning;
+* accountability;
+* execution intelligence.
+
+---
+
+# 39. Technology Evolution
+
+The technology stack should evolve with the product.
+
+### Early
 
 ```text
+Monolith
++
 PostgreSQL
++
+REST API
++
+Responsive Web App
 ```
 
-### Mobile
+### Intermediate
 
 ```text
-React Native
-Flutter
-Native iOS
+Backend
++
+Task Engine
++
+Planning Engine
++
+Event Processing
++
+Notification Service
 ```
 
-### Web
+### Advanced
 
 ```text
-Nuxt
-Next.js
-React
-Vue
+Cloud Platform
++
+Event Bus
++
+Workers
++
+Planning Engine
++
+AI Layer
++
+Analytics
++
+Multiple Clients
 ```
 
-### Desktop
-
-```text
-Web
-Electron
-Tauri
-Native
-```
-
-The architecture should survive technology changes.
+Do not introduce microservices merely because the architecture diagram contains them.
 
 ---
 
-# 54. Recommended Initial Strategy
+# 40. Architecture Evolution
 
-The first implementation should avoid building separate native applications for every platform.
-
-A practical progression is:
-
-```mermaid id="j4f4e8"
+```mermaid
 flowchart LR
+    A["Simple Monolith"]
+    B["Modular Backend"]
+    C["Event-Aware Backend"]
+    D["Distributed Workers"]
+    E["Adaptive Platform"]
+    F["AI-Assisted Platform"]
 
-    BACKEND["Cloud Backend"]
-
-    BACKEND --> WEB["Responsive Web App"]
-
-    BACKEND --> MOBILE["Mobile Client"]
-
-    WEB --> WINDOWS["Windows"]
-    MOBILE --> IPHONE["iPhone"]
-
-    BACKEND --> NOTIFY["Notification Infrastructure"]
+    A --> B --> C --> D --> E --> F
 ```
 
-This keeps the initial system manageable.
+The architecture should evolve because the system needs it.
+
+Not because the technology looks impressive.
 
 ---
 
-# 55. Progressive Platform Expansion
+# 41. The MVP
 
-```text id="r2f7bs"
-V0
-Web prototype
-
-↓
-
-V1
-Cloud backend + responsive web app
-
-↓
-
-V2
-iPhone-focused execution client
-
-↓
-
-V3
-Improved Windows experience
-
-↓
-
-V4
-Real-time synchronization
-
-↓
-
-V5
-Advanced device integrations
-```
-
-The project should not build every platform simultaneously.
-
----
-
-# 56. Cross-Platform Event Flow
-
-```mermaid id="q0q1u5"
-sequenceDiagram
-
-    participant I as iPhone
-    participant C as Cloud
-    participant P as Planner
-    participant W as Windows
-
-    I->>C: Complete Task
-    C->>C: Update State
-    C->>P: Task Completed Event
-    P->>C: Recalculate Schedule
-    C->>W: Schedule Changed
-    C->>I: Updated Next Action
-
-    W->>C: Fetch Updated State
-    C->>W: Current Schedule
-```
-
----
-
-# 57. Cross-Platform North Star
-
-The user should never have to think:
-
-> "Which device did I make that change on?"
-
-The system should feel like:
-
-> **One personal operating system accessible from multiple devices.**
-
----
-
-# 58. Core Rules
-
-### Rule 1
-
-**Cloud is the source of truth.**
-
-### Rule 2
-
-**Devices are clients, not independent systems.**
-
-### Rule 3
-
-**Every important user action must synchronize.**
-
-### Rule 4
-
-**Offline actions should be preserved where practical.**
-
-### Rule 5
-
-**Conflicts must be handled explicitly.**
-
-### Rule 6
-
-**Notifications are not state.**
-
-### Rule 7
-
-**The same data can have different platform-specific interfaces.**
-
-### Rule 8
-
-**Critical state must remain recoverable.**
-
-### Rule 9
-
-**Security must apply to every device.**
-
-### Rule 10
-
-**Adding another platform should not require rebuilding the backend.**
-
----
-
-# 59. Final Architecture
-
-The cross-platform system ultimately becomes:
-
-```mermaid id="a3v1rc"
-flowchart TB
-
-    USER["USER"]
-
-    subgraph DEVICES["DEVICES"]
-        IPHONE["iPhone"]
-        WINDOWS["Windows"]
-        WEB["Web"]
-    end
-
-    subgraph CLOUD["CLOUD"]
-        API["API"]
-        STATE[("System of Truth")]
-        EVENTS["Event System"]
-        PLANNER["Planning Engine"]
-        REPLAN["Replanning Engine"]
-        NOTIFY["Notification Engine"]
-    end
-
-    USER --> IPHONE
-    USER --> WINDOWS
-    USER --> WEB
-
-    IPHONE <--> API
-    WINDOWS <--> API
-    WEB <--> API
-
-    API <--> STATE
-
-    STATE --> EVENTS
-    EVENTS --> PLANNER
-    EVENTS --> REPLAN
-    EVENTS --> NOTIFY
-
-    PLANNER --> STATE
-    REPLAN --> STATE
-
-    NOTIFY --> IPHONE
-    NOTIFY --> WINDOWS
-```
-
----
-
-# 60. Final Principle
-
-The user may switch devices.
-
-The user may lose connectivity.
-
-The user may be interrupted.
-
-The user may change the schedule.
-
-The system must still remain coherent.
-
-Therefore:
-
-> **The device is temporary. The system is continuous.**
-
-The ultimate experience should be:
+The first real MVP should contain only:
 
 ```text
-iPhone
-   ↓
-Windows
-   ↓
-Web
-   ↓
-iPhone
-   ↓
-Windows
+Authentication
+        ↓
+Goals / Courses / Projects
+        ↓
+Tasks
+        ↓
+Deadlines
+        ↓
+Daily Availability
+        ↓
+Daily Planning
+        ↓
+Next Action
+        ↓
+Start / Complete / Postpone
+        ↓
+Basic Replanning
 ```
 
-while the underlying system remains:
+And nothing more is required to prove the core idea.
+
+---
+
+# 42. MVP Success Criteria
+
+The MVP is successful if the user can repeatedly perform this loop:
+
+```mermaid
+flowchart LR
+    A["Define Work"]
+    B["See Plan"]
+    C["Know Next Action"]
+    D["Start"]
+    E["Complete"]
+    F["Adjust"]
+    G["Continue"]
+
+    A --> B --> C --> D --> E --> F --> G --> C
+```
+
+The key metric is not:
+
+> Number of features.
+
+It is:
+
+> **Does the system increase the amount of meaningful work actually completed?**
+
+---
+
+# 43. What Must Wait
+
+The following should remain out of scope until the core execution loop is proven:
+
+* custom AI agents;
+* autonomous planning;
+* machine learning models;
+* social features;
+* public profiles;
+* elaborate gamification;
+* complex achievements;
+* advanced productivity scoring;
+* unnecessary microservices;
+* excessive integrations;
+* custom hardware;
+* complicated dashboards;
+* predictive life optimization.
+
+These may eventually become useful.
+
+They are not prerequisites for proving the system.
+
+---
+
+# 44. Recommended Development Order
+
+The practical implementation order is:
 
 ```text
-          ONE CLOUD STATE
-                ↓
-        ONE EXECUTION MODEL
-                ↓
-       ONE SOURCE OF TRUTH
-                ↓
-        CONTINUOUS ADAPTATION
+01. Repository & documentation
+        ↓
+02. Backend foundation
+        ↓
+03. Database
+        ↓
+04. Authentication
+        ↓
+05. Goals / Courses / Projects
+        ↓
+06. Tasks
+        ↓
+07. Deadlines
+        ↓
+08. Today view
+        ↓
+09. Scheduling engine
+        ↓
+10. Next-action engine
+        ↓
+11. Execution tracking
+        ↓
+12. Event history
+        ↓
+13. Interruption handling
+        ↓
+14. Replanning
+        ↓
+15. Notifications
+        ↓
+16. Cross-platform synchronization
+        ↓
+17. Calendar integration
+        ↓
+18. Automation
+        ↓
+19. Adaptive scheduling
+        ↓
+20. AI assistance
+        ↓
+21. Analytics / learning
 ```
 
-That is the foundation of a genuinely cross-platform personal execution system.
+---
+
+# 45. The Development Loop
+
+Every feature should follow:
+
+```mermaid
+flowchart TD
+    A["Identify Problem"]
+    B["Define Smallest Solution"]
+    C["Implement"]
+    D["Test"]
+    E["Use in Reality"]
+    F["Observe"]
+    G["Improve"]
+
+    A --> B --> C --> D --> E --> F --> G --> A
+```
+
+This prevents building theoretical productivity features that look impressive but do not improve actual execution.
+
+---
+
+# 46. Product Maturity Model
+
+The long-term progression is:
+
+```text
+LEVEL 0
+Static To-Do List
+
+↓
+
+LEVEL 1
+Structured Task System
+
+↓
+
+LEVEL 2
+Daily Planning System
+
+↓
+
+LEVEL 3
+Execution Tracking System
+
+↓
+
+LEVEL 4
+Adaptive Replanning System
+
+↓
+
+LEVEL 5
+Automated Cross-Platform System
+
+↓
+
+LEVEL 6
+Adaptive Scheduling System
+
+↓
+
+LEVEL 7
+AI-Assisted Execution System
+
+↓
+
+LEVEL 8
+Personal Execution Operating System
+```
+
+Each level should be earned by demonstrating that the previous level works.
+
+---
+
+# 47. North Star
+
+The entire development roadmap can be reduced to one loop:
+
+```mermaid
+flowchart LR
+    A["OBSERVE"]
+    B["UNDERSTAND"]
+    C["DECIDE"]
+    D["EXECUTE"]
+    E["ADAPT"]
+
+    A --> B --> C --> D --> E --> A
+```
+
+### Observe
+
+What is happening?
+
+### Understand
+
+What matters?
+
+### Decide
+
+What should happen next?
+
+### Execute
+
+Do the work.
+
+### Adapt
+
+Reality changed.
+
+Then repeat.
+
+---
+
+# 48. Final Development Principle
+
+The system should become more intelligent **only after it becomes reliable**.
+
+It should become more automated **only after the underlying workflow is understood**.
+
+It should become more complex **only when complexity solves a demonstrated problem**.
+
+And it should always preserve the original objective:
+
+> **Help the user consistently execute meaningful work despite changing priorities, limited time, fluctuating energy and unpredictable real life.**
+
+The roadmap is therefore not:
+
+> Build the most advanced productivity platform possible.
+
+It is:
+
+> **Build the smallest system that genuinely improves execution, prove it, then progressively make it more adaptive, automated and intelligent.**
