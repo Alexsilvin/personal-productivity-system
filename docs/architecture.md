@@ -4,12 +4,12 @@
 
 Use a local-first client with a domain layer that owns tasks, schedules, interruptions, preferences, and notification intents. Platform adapters provide calendar, notification, storage, and background execution capabilities.
 
-```text
-UI
-  -> Application services
-    -> Domain model and scheduling engine
-      -> Repositories and event log
-        -> Platform adapters
+```mermaid
+flowchart LR
+    ui[UI] --> app[Application services]
+    app --> domain[Domain model and scheduling engine]
+    domain --> repositories[Repositories and event log]
+    repositories --> adapters[Platform adapters]
 ```
 
 ## Core components
