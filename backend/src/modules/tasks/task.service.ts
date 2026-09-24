@@ -57,14 +57,16 @@ export class TaskService {
     }
 
     const nextUserId = existingTask.userId;
-    const nextProjectId = input.projectId ?? existingTask.projectId;
-    const nextCourseId = input.courseId ?? existingTask.courseId;
-    const nextGoalId = input.goalId ?? existingTask.goalId;
+    const nextProjectId = input.projectId !== undefined ? input.projectId : existingTask.projectId;
+    const nextCourseId = input.courseId !== undefined ? input.courseId : existingTask.courseId;
+    const nextGoalId = input.goalId !== undefined ? input.goalId : existingTask.goalId;
 
     await this.assertValidReferences(nextUserId, nextProjectId, nextCourseId, nextGoalId);
 
-    const estimatedDurationMinutes = input.estimatedDurationMinutes ?? existingTask.estimatedDurationMinutes;
-    const minimumDurationMinutes = input.minimumDurationMinutes ?? existingTask.minimumDurationMinutes;
+    const estimatedDurationMinutes =
+      input.estimatedDurationMinutes !== undefined ? input.estimatedDurationMinutes : existingTask.estimatedDurationMinutes;
+    const minimumDurationMinutes =
+      input.minimumDurationMinutes !== undefined ? input.minimumDurationMinutes : existingTask.minimumDurationMinutes;
 
     if (minimumDurationMinutes > estimatedDurationMinutes) {
       throw new AppError(
@@ -78,14 +80,14 @@ export class TaskService {
       projectId: nextProjectId,
       courseId: nextCourseId,
       goalId: nextGoalId,
-      title: input.title?.trim() ?? existingTask.title,
-      description: input.description ?? existingTask.description,
-      status: input.status ?? existingTask.status,
-      priority: input.priority ?? existingTask.priority,
+      title: input.title !== undefined ? input.title.trim() : existingTask.title,
+      description: input.description !== undefined ? input.description : existingTask.description,
+      status: input.status !== undefined ? input.status : existingTask.status,
+      priority: input.priority !== undefined ? input.priority : existingTask.priority,
       estimatedDurationMinutes,
       minimumDurationMinutes,
-      dueAt: input.dueAt ?? existingTask.dueAt,
-      completedAt: input.completedAt ?? existingTask.completedAt,
+      dueAt: input.dueAt !== undefined ? input.dueAt : existingTask.dueAt,
+      completedAt: input.completedAt !== undefined ? input.completedAt : existingTask.completedAt,
     });
 
     if (!updatedTask) {
@@ -115,23 +117,38 @@ export class TaskService {
     }
 
     if (projectId) {
-      const projectExists = await this.repository.findProjectById(projectId);
-      if (!projectExists) {
-        throw new AppError('PROJECT_NOT_FOUND', 'Project not found', 404);
+      const projectOwnsIt = await this.repository.findProjectForUser(projectId, userId);
+      if (!projectOwnsIt) {
+        const projectExists = await this.repository.findProjectById(projectId);
+        if (!projectExists) {
+          throw new AppError('PROJECT_NOT_FOUND', 'Project not found', 404);
+        }
+
+        throw new AppError('PROJECT_OWNERSHIP_MISMATCH', 'Project does not belong to this user', 409);
       }
     }
 
     if (courseId) {
-      const courseExists = await this.repository.findCourseById(courseId);
-      if (!courseExists) {
-        throw new AppError('COURSE_NOT_FOUND', 'Course not found', 404);
+      const courseOwnsIt = await this.repository.findCourseForUser(courseId, userId);
+      if (!courseOwnsIt) {
+        const courseExists = await this.repository.findCourseById(courseId);
+        if (!courseExists) {
+          throw new AppError('COURSE_NOT_FOUND', 'Course not found', 404);
+        }
+
+        throw new AppError('COURSE_OWNERSHIP_MISMATCH', 'Course does not belong to this user', 409);
       }
     }
 
     if (goalId) {
-      const goalExists = await this.repository.findGoalById(goalId);
-      if (!goalExists) {
-        throw new AppError('GOAL_NOT_FOUND', 'Goal not found', 404);
+      const goalOwnsIt = await this.repository.findGoalForUser(goalId, userId);
+      if (!goalOwnsIt) {
+        const goalExists = await this.repository.findGoalById(goalId);
+        if (!goalExists) {
+          throw new AppError('GOAL_NOT_FOUND', 'Goal not found', 404);
+        }
+
+        throw new AppError('GOAL_OWNERSHIP_MISMATCH', 'Goal does not belong to this user', 409);
       }
     }
   }

@@ -103,13 +103,28 @@ export class TaskRepository {
     return result.rows.length > 0;
   }
 
+  async findProjectForUser(projectId: string, userId: string): Promise<boolean> {
+    const result = await query<{ id: string }>(`SELECT id FROM projects WHERE id = $1 AND user_id = $2;`, [projectId, userId]);
+    return result.rows.length > 0;
+  }
+
   async findCourseById(id: string): Promise<boolean> {
     const result = await query<{ id: string }>(`SELECT id FROM courses WHERE id = $1;`, [id]);
     return result.rows.length > 0;
   }
 
+  async findCourseForUser(courseId: string, userId: string): Promise<boolean> {
+    const result = await query<{ id: string }>(`SELECT id FROM courses WHERE id = $1 AND user_id = $2;`, [courseId, userId]);
+    return result.rows.length > 0;
+  }
+
   async findGoalById(id: string): Promise<boolean> {
     const result = await query<{ id: string }>(`SELECT id FROM goals WHERE id = $1;`, [id]);
+    return result.rows.length > 0;
+  }
+
+  async findGoalForUser(goalId: string, userId: string): Promise<boolean> {
+    const result = await query<{ id: string }>(`SELECT id FROM goals WHERE id = $1 AND user_id = $2;`, [goalId, userId]);
     return result.rows.length > 0;
   }
 
